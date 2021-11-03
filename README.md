@@ -1,2 +1,6 @@
-# sta141a_project
-Final project for sta 141a
+# STA141A FINAL PROJECT
+
+
+## Set up 
+
+* git
