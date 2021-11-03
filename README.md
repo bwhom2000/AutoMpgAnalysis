@@ -1,4 +1,4 @@
-# STA141A FINAL PROJECT
+# STA141A FINAL PROJECT (Due December 10 at 11.59 pm PT)
 
 
 ## Set up 
