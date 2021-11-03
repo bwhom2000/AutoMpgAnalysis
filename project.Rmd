@@ -1,0 +1,26 @@
+---
+title: "Project"
+author: "Brandon Hom"
+date: "11/2/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+# keeps this here to remove comments from knitted output. 
+knitr::opts_chunk$set(comments=NA)
+```
+```{r}
+library(tidyverse)
+library(knitr)
+```
+
+# Introduction 
+
+# Exploratory data analysis
+```{r}
+data <- read.csv('insurance.csv')
+```
+
+# Regressional analysis 
+
+# Concusion 
