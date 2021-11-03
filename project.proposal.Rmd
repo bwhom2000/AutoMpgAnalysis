@@ -1,0 +1,15 @@
+---
+title: "Project Proposal: Predicting"
+author: "Brandon Hom| Aditi Goyal| Tammie Tam"
+date: "11/2/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(comments=NA)
+```
+
+```{r}
+read.csv('insur)
+```
+
