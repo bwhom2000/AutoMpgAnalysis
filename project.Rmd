@@ -20,6 +20,18 @@ library(knitr)
 ```{r}
 data <- read.csv('insurance.csv')
 ```
+```{r}
+data$sex <- factor(data$sex)
+```
+```{r}
+is.factor(data$sex)
+```
+
+
+
+```{r}
+summary(lm(charges~sex,data=data))
+```
 
 # Regressional analysis 
 
