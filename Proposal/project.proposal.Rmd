@@ -14,7 +14,8 @@ knitr::opts_chunk$set(comments=NA)
 
 # Introduction/Background 
 
-Fuel economy is defined as how much a car can travel per volume of fuel, which is usually measured as $\frac{miles}{gallon}(mpg)$. Cars that have a lower value for mpg are considered to have good fuel economy and vice versa. Logically, one would prefer to have a car with good fuel economy, since money would not have to be frequently expended on gas. This also ties into global warming. Cars with poor fuel economy end up contributing to the global warming problem, as more gas is used to cover travel certain distances [1]. Of course individuals still need vehicles to get them to their destinations, but the effects of cars on global warming can be mitigated by using cars with good fuel economy instead. By being able to predict a car's fuel economy based on a set of features, one can make a more informed decision when purchasing a car, a decision that can have a positive impact on both spending and global warming.    
+Fuel economy is defined as how much a car can travel per volume of fuel, which is usually measured as miles per gallon (mpg). Cars with low mpg have good fuel economy and vice versa. Logically, consumers prefer to own cars with good fuel economy, since they would spend less money on gas. In addition, cars with poor fuel economy consumes more gas, which, in turn, contributes to global warming; gas is ultimately a limited resource [1]. The effects of pollution produced from the consumption of gas can be mitigated by using cars with good fuel economy.
+The ability to predict a car's fuel economy based on a set of a given car's characteristics can make a more informed decision when purchasing a car - a decision that can have a positive impact on both spending and global warming.  
 
 # Dataset Description 
 
@@ -36,7 +37,7 @@ The model that seems appropriate for predicting mpg is linear regression model; 
 
 To assess the appropriateness of a linear regression model, we will also perform diagnostics. Plots of the residuals vs fitted values and residuals vs predictor variables will be made to check for constant variance. The normality assumption will be checked with a QQplot and histogram of the residuals. 
 
-Finally, there may also be multicollinearity present within our data. To address this problem, we plan on using forward and backward stepwise regression to tune our model by removing predictor variables that do not any significant change to the insurance costs. 
+Finally, there may also be multicollinearity present within our data. To address this problem, we plan on using forward and backward stepwise regression to tune our model by removing predictor variables that do not any significant change to mpg. 
 
 To build a more general predictive model, we plan on taking a machine learning approach using R's `caret` package. That is we will split the data into training and test set and build a linear regression and logistic regression model using the training set. For the linear regression model, we plan on using only the impactful features found during the regression analysis involving the entire dataset. The linear regression model can be evaluated by computing the `RMSE` value for both training and testing; if the RMSE is high for a linear model, we may try fitting other models such as polynomial regression. 
 

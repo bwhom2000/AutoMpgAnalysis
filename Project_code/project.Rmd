@@ -1,0 +1,163 @@
+---
+title: "Project"
+author: "Brandon Hom"
+date: "11/2/2021"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+# keeps this here to remove comments from knitted output. 
+knitr::opts_chunk$set(comments=NA)
+```
+```{r,include=F}
+library(tidyverse)
+library(knitr)
+library(leaps)
+library(GGally)
+library(ggbiplot)
+```
+
+# Introduction 
+
+# Exploratory data analysis
+```{r,warning=F}
+# data cleaning up
+data <- read.csv('auto-mpg.csv')
+#convert horsepower chr->dbl 
+data$horsepower <- as.numeric(data$horsepower)
+#remove rows with missing values
+data <- na.omit(data)
+#translate origin numbers to country strings
+data$origin <- ifelse(data$origin==1,"USA",ifelse(data$origin==2,"Europe","Japan"))
+data$origin <- as.factor(data$origin)
+#cylinders count for 3 and 5 low combine with 4 and 6 respectively
+data$cylinders <- replace(data$cylinders,data$cylinders %in% c(3,5),c(4,6))
+data$cylinders <- as.factor(data$cylinders)
+#remove model.year, not interested in this feature 
+data <- data[-c(7)]
+data$car.name <- word(data$car.name,1)
+```
+
+```{r}
+cor(data[-c(2,7,8)])
+```
+
+
+```{r}
+#h.clustering.complete <- hclust(dist(data),method="complete")
+#dendro.data <- dendro_data(as.dendrogram(h.clustering.complete),type="rectangle")
+
+#ggplot(dendro.data$segments) + 
+  #geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
+  #geom_text(data = dendro.data$labels, aes(x, y, label = label),
+           # hjust=1,angle = 90, size = 3.5)+ylim(-1,5000)+
+  #theme_light()+
+  #theme(panel.grid=element_blank(),
+   #     plot.title=element_text(hjust=.5,size=20),
+      #  axis.text = element_text(size=15)
+       # )+
+  #labs(title="Complete linkage Dendrogram of Cars",
+   #    x="Car Name",
+    #   y="height") 
+```
+
+
+```{r,fig.show='hold',out.width="50%",warning=F,echo=F}
+pcs.out <- prcomp(data[-c(2,7,8)],scale.=T)
+summary(pcs.out)
+
+ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+  geom_hline(yintercept = 0,col="blue")+
+  geom_vline(xintercept = 0,col="blue")+
+  ylim(0,1.8)+
+  xlim(0,-5)+
+  theme_light()+
+  theme(plot.title=element_text(hjust=.5,size=20),
+        axis.text = element_text(size=15)
+        )+
+  labs(title="Top left",
+       ) 
+
+
+ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+  geom_hline(yintercept = 0,col="blue")+
+  geom_vline(xintercept = 0,col="blue")+
+  ylim(0,1.8)+
+  xlim(0,2.8)+
+  theme_light()+
+  theme(plot.title=element_text(hjust=.5,size=20),
+        axis.text = element_text(size=15)
+        )+
+  labs(title="Top Right",
+       ) 
+```
+```{r,fig.show='hold',out.width="50%",warning=F,echo=F}
+
+ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+  geom_hline(yintercept = 0,col="blue")+
+  geom_vline(xintercept = 0,col="blue")+
+  ylim(0,-2.5)+
+  xlim(0,-4.5)+
+  theme_light()+
+  theme(plot.title=element_text(hjust=.5,size=20),
+        axis.text = element_text(size=15)
+        )+
+  labs(title="Bottom Left",
+       ) 
+
+ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+  geom_hline(yintercept = 0,col="blue")+
+  geom_vline(xintercept = 0,col="blue")+
+  ylim(0,-3)+
+  xlim(0,2.8)+
+  theme_light()+
+  theme(plot.title=element_text(hjust=.5,size=20),
+        axis.text = element_text(size=15)
+        )+
+  labs(title="Bottom Right",
+       ) 
+```
+
+
+```{r,out.height="35%",out.width="100%",fig.align='center'}
+ggpairs(data[-c(2,7,8)],aes(color=data$origin))+theme_bw()
+```
+
+
+```{r}
+data.transformed <- data
+data.transformed$mpg <- log(data.transformed$mpg,base=10)
+data.transformed <- data.transformed[-c(8)]
+```
+
+
+```{r}
+fit <- lm(mpg~.,data=data.transformed)
+summary(fit)
+```
+```{r}
+library(MASS)
+step.model <- stepAIC(fit, direction = "both",
+trace = FALSE)
+summary(step.model)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Conclusion 
+
+# Appendix: R code used
+
+```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
+```
