@@ -6,8 +6,10 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
+#global options
 # keeps this here to remove comments from knitted output. 
 knitr::opts_chunk$set(comments=NA)
+knitr::opts_chunk$set(echo=F)
 ```
 ```{r,include=F}
 library(tidyverse)
@@ -15,6 +17,7 @@ library(knitr)
 library(leaps)
 library(GGally)
 library(ggbiplot)
+library(caret)
 ```
 
 # Introduction 
@@ -60,17 +63,24 @@ cor(data[-c(2,7,8)])
    #    x="Car Name",
     #   y="height") 
 ```
-
-
-```{r,fig.show='hold',out.width="50%",warning=F,echo=F}
+```{r}
 pcs.out <- prcomp(data[-c(2,7,8)],scale.=T)
 summary(pcs.out)
+```
 
+```{r,fig.align='center',out.width="70%",out.height="70%"}
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="blue")+
-  geom_vline(xintercept = 0,col="blue")+
+  geom_vline(xintercept = 0,col="blue")
+```
+
+```{r,fig.show='hold',out.width="52%",warning=F}
+
+ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+  geom_hline(yintercept = 0,col="purple")+
+  geom_vline(xintercept = 0,col="purple")+
   ylim(0,1.8)+
-  xlim(0,-5)+
+  xlim(-5,0)+
   theme_light()+
   theme(plot.title=element_text(hjust=.5,size=20),
         axis.text = element_text(size=15)
@@ -80,8 +90,8 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
 
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="blue")+
-  geom_vline(xintercept = 0,col="blue")+
+  geom_hline(yintercept = 0,col="purple")+
+  geom_vline(xintercept = 0,col="purple")+
   ylim(0,1.8)+
   xlim(0,2.8)+
   theme_light()+
@@ -94,10 +104,10 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
 ```{r,fig.show='hold',out.width="50%",warning=F,echo=F}
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="blue")+
-  geom_vline(xintercept = 0,col="blue")+
-  ylim(0,-2.5)+
-  xlim(0,-4.5)+
+  geom_hline(yintercept = 0,col="purple")+
+  geom_vline(xintercept = 0,col="purple")+
+  ylim(-2.5,0)+
+  xlim(-4.5,0)+
   theme_light()+
   theme(plot.title=element_text(hjust=.5,size=20),
         axis.text = element_text(size=15)
@@ -106,9 +116,9 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
        ) 
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="blue")+
-  geom_vline(xintercept = 0,col="blue")+
-  ylim(0,-3)+
+  geom_hline(yintercept = 0,col="purple")+
+  geom_vline(xintercept = 0,col="purple")+
+  ylim(-3,0)+
   xlim(0,2.8)+
   theme_light()+
   theme(plot.title=element_text(hjust=.5,size=20),
@@ -120,7 +130,7 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
 
 
 ```{r,out.height="35%",out.width="100%",fig.align='center'}
-ggpairs(data[-c(2,7,8)],aes(color=data$origin))+theme_bw()
+ggpairs(data[-c(2,7,8)],aes(color=data$origin))+theme_bw()+theme(panel.grid=element_blank())
 ```
 
 
@@ -132,8 +142,9 @@ data.transformed <- data.transformed[-c(8)]
 
 
 ```{r}
-fit <- lm(mpg~.,data=data.transformed)
+fit <- lm(mpg~.+I(horsepower^2),data=data.transformed)
 summary(fit)
+plot(fit)
 ```
 ```{r}
 library(MASS)
@@ -141,6 +152,102 @@ step.model <- stepAIC(fit, direction = "both",
 trace = FALSE)
 summary(step.model)
 ```
+
+
+
+## Predictive model 
+
+```{r}
+train.test <- function(data,split.size){
+  #randomize the data
+  randomized.rows <- sample(nrow(data))
+  randomized.data <- data[randomized.rows,]
+  #split based on desired size
+  split <- round(nrow(randomized.data)*split.size)
+  train <- randomized.data[1:split,]
+  test <- randomized.data[(split+1):nrow(randomized.data),]
+  return(list(train,test))
+}
+#computes the Rsquared and MSE
+model.metrics <- function(predicted,actual,data){
+  SSE <- sum((predicted-actual)^2)
+  SSTO <- sum((actual-mean(actual))^2)
+  R.squared <- 1-(SSE/SSTO)
+  R.MSE <- sqrt(SSE/nrow(data))
+  results <- c(R.MSE,R.squared)
+  names(results) <- c("RMSE","R.squared")
+  return(results)
+}
+
+#From the full model:mpg~.+I(horsepower^2)+I(weight^2), specify what features to remove
+build.model <- function(data,feats){
+  if(sum(!feats%in%"None")!=0) {
+  #input validation
+  if(sum(!feats %in% colnames(data))!=0){
+    return("Error: No Such feature(s)")
+  }
+  features <- as.formula(paste("mpg~.+I(horsepower^2)-",paste(feats,collapse= "-")))
+  return(features)
+  }
+  else return(as.formula(paste("mpg~.+I(horsepower^2)")))
+  
+}
+
+build.and.evaluate <- function(data,split.size,feats="None"){
+  train <- train.test(data,split.size)[[1]]
+  test <- train.test(data,split.size)[[2]]
+  model <- lm(build.model(data,feats),train)
+  print(build.model(data,feats))
+  p.train <- predict(model,train)
+  p.test <- predict(model,test)
+  metric.results <- c(model.metrics(p.train,train$mpg,train),
+                      model.metrics(p.test,test$mpg,test))
+  names(metric.results) <- c("Train.RMSE","Train.R.Squared","Test.RMSE","Test.R.Squared")
+  return(metric.results)
+}
+
+```
+
+
+
+
+## Cross-Fold validation model 
+
+```{r,include=F}
+model <- train(
+  build.model(data.transformed), 
+  data.transformed,
+  method = "lm",
+  trControl = trainControl(
+    method = "repeatedcv", 
+    number = 10,
+    repeats = 10,
+    verboseIter = TRUE
+  )
+)
+model.no <- train(
+  build.model(data.transformed,c("displacement")), 
+  data.transformed,
+  method = "lm",
+  trControl = trainControl(
+    method = "cv", 
+    number = 10,
+    verboseIter = TRUE
+  )
+)
+```
+
+```{r}
+model
+```
+
+```{r}
+new.dat <- data.frame(cylinders=as.factor(6),displacement=80,horsepower=69,weight=2020,acceleration=19,origin=as.factor("USA"))
+```
+```{r}
+10^predict(model,new.dat)
+```
+
 
 
 
