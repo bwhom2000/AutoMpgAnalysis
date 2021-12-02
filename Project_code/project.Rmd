@@ -18,6 +18,8 @@ library(leaps)
 library(GGally)
 library(ggbiplot)
 library(caret)
+library(RColorBrewer)
+library(dendextend)
 ```
 
 # Introduction 
@@ -39,46 +41,71 @@ data$cylinders <- as.factor(data$cylinders)
 #remove model.year, not interested in this feature 
 data <- data[-c(7)]
 data$car.name <- word(data$car.name,1)
+#car.name fix typos
+data$car.name[160] <- "chevrolet"
+data$car.name[330] <- "volkswagen"
+data$car.name[82] <- "toyota"
 ```
+
+
+
 
 ```{r}
 cor(data[-c(2,7,8)])
 ```
 
 
-```{r}
-#h.clustering.complete <- hclust(dist(data),method="complete")
-#dendro.data <- dendro_data(as.dendrogram(h.clustering.complete),type="rectangle")
 
-#ggplot(dendro.data$segments) + 
-  #geom_segment(aes(x = x, y = y, xend = xend, yend = yend))+
-  #geom_text(data = dendro.data$labels, aes(x, y, label = label),
-           # hjust=1,angle = 90, size = 3.5)+ylim(-1,5000)+
-  #theme_light()+
-  #theme(panel.grid=element_blank(),
-   #     plot.title=element_text(hjust=.5,size=20),
-      #  axis.text = element_text(size=15)
-       # )+
-  #labs(title="Complete linkage Dendrogram of Cars",
-   #    x="Car Name",
-    #   y="height") 
+```{r}
+h.clustering.complete <- hclust(dist(scale(data[-c(2,7,8)])),method="complete") %>% as.dendrogram() %>% color_branches(k=3)
+color.order <- as.numeric(data$origin)
+colors.dendro <- color.order[order.dendrogram(h.clustering.complete)]
+colors.dendro <- ifelse(colors.dendro==3,"green",ifelse(colors.dendro==2,"red","blue"))
+labels_colors(h.clustering.complete) <- colors.dendro
+h.clustering.complete <- h.clustering.complete %>% set("labels_col",colors.dendro)
+plot(h.clustering.complete)
 ```
+```{r}
+data.frame(data,cluster=cutree(h.clustering.complete,h=5)) %>% count(c('origin','cluster'))
+```
+
+
 ```{r}
 pcs.out <- prcomp(data[-c(2,7,8)],scale.=T)
-summary(pcs.out)
+pcs.dat <- data.frame(rownames(pcs.out$rotation),pcs.out$rotation)
+colnames(pcs.dat)[1] <- "Features"
+pcs.importance <- data.frame(summary(pcs.out)[6])
+pcs.importance <- cbind(c("Standard deviation","Proportion of Variance","Cumulative Proportion"),pcs.importance)
+colnames(pcs.importance) <- c("Metrics","PC1","PC2","PC3","PC4","PC5")
+pcs.importance
 ```
 
+
+
+```{r}
+data %>% arrange(acceleration) %>% tail(5)
+```
+
+
 ```{r,fig.align='center',out.width="70%",out.height="70%"}
+cols <- brewer.pal(3, "Dark2")
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="blue")+
-  geom_vline(xintercept = 0,col="blue")
+  geom_hline(yintercept = 0,col="hotpink3",size=.75)+
+  geom_vline(xintercept = 0,col="hotpink3",size=.75)+
+  theme_light()+
+  scale_color_manual(values=cols)+
+    theme(legend.box.background = element_rect(linetype="solid", colour ="hotpink3", size=1.25),
+        legend.title = element_text(face="bold", hjust = .5),
+        legend.text = element_text(face="bold"))+
+  guides(colour=guide_legend("Country"))
+  
 ```
 
 ```{r,fig.show='hold',out.width="52%",warning=F}
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="purple")+
-  geom_vline(xintercept = 0,col="purple")+
+  geom_hline(yintercept = 0,col="hotpink3")+
+  geom_vline(xintercept = 0,col="hotpink3")+
   ylim(0,1.8)+
   xlim(-5,0)+
   theme_light()+
@@ -86,12 +113,16 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
         axis.text = element_text(size=15)
         )+
   labs(title="Top left",
-       ) 
+       )+
+  scale_color_manual(values=cols)+ theme(legend.box.background = element_rect(linetype="solid", colour ="hotpink3", size=1.25),
+        legend.title = element_text(face="bold", hjust = .5),
+        legend.text = element_text(face="bold"))+
+  guides(colour=guide_legend("Country"))
 
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="purple")+
-  geom_vline(xintercept = 0,col="purple")+
+  geom_hline(yintercept = 0,col="hotpink3")+
+  geom_vline(xintercept = 0,col="hotpink3")+
   ylim(0,1.8)+
   xlim(0,2.8)+
   theme_light()+
@@ -99,13 +130,18 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
         axis.text = element_text(size=15)
         )+
   labs(title="Top Right",
-       ) 
+       )+
+  scale_color_manual(values=cols)+ theme(legend.box.background = element_rect(linetype="solid", colour ="hotpink3", size=1.25),
+        legend.title = element_text(face="bold", hjust = .5),
+        legend.text = element_text(face="bold"))+
+  guides(colour=guide_legend("Country"))
 ```
+
 ```{r,fig.show='hold',out.width="50%",warning=F,echo=F}
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="purple")+
-  geom_vline(xintercept = 0,col="purple")+
+  geom_hline(yintercept = 0,col="hotpink3")+
+  geom_vline(xintercept = 0,col="hotpink3")+
   ylim(-2.5,0)+
   xlim(-4.5,0)+
   theme_light()+
@@ -113,11 +149,16 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
         axis.text = element_text(size=15)
         )+
   labs(title="Bottom Left",
-       ) 
+       )+
+    scale_color_manual(values=cols)+ 
+  theme(legend.box.background = element_rect(linetype="solid", colour ="hotpink3", size=1.25),
+        legend.title = element_text(face="bold", hjust = .5),
+        legend.text = element_text(face="bold"))+
+  guides(colour=guide_legend("Country"))
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="purple")+
-  geom_vline(xintercept = 0,col="purple")+
+  geom_hline(yintercept = 0,col="hotpink3")+
+  geom_vline(xintercept = 0,col="hotpink3")+
   ylim(-3,0)+
   xlim(0,2.8)+
   theme_light()+
@@ -125,13 +166,22 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
         axis.text = element_text(size=15)
         )+
   labs(title="Bottom Right",
-       ) 
+       )+
+    scale_color_manual(values=cols)+
+   theme(legend.box.background = element_rect(linetype="solid", colour ="hotpink3", size=1.25),
+        legend.title = element_text(face="bold", hjust = .5),
+        legend.text = element_text(face="bold"))+
+  guides(colour=guide_legend("Country"))
 ```
 
 
 ```{r,out.height="35%",out.width="100%",fig.align='center'}
-ggpairs(data[-c(2,7,8)],aes(color=data$origin))+theme_bw()+theme(panel.grid=element_blank())
+ggpairs(data[-c(2,7,8)],aes(color=data$origin))+theme_bw()+theme(panel.grid=element_blank()) + scale_color_manual(values=brewer.pal(3,"Set1"))
 ```
+```{r}
+ggpairs(data.transformed[-c(2,7,8)],aes(color=data$origin))+theme_bw()+theme(panel.grid=element_blank()) + scale_color_manual(values=brewer.pal(3,"Set1"))
+```
+
 
 
 ```{r}
@@ -140,9 +190,14 @@ data.transformed$mpg <- log(data.transformed$mpg,base=10)
 data.transformed <- data.transformed[-c(8)]
 ```
 
-
 ```{r}
 fit <- lm(mpg~.+I(horsepower^2),data=data.transformed)
+summary(fit)
+plot(fit)
+```
+
+```{r}
+fit <- lm(mpg~.+I(horsepower^2)+I(weight^2),data=data.transformed)
 summary(fit)
 plot(fit)
 ```
@@ -158,6 +213,7 @@ summary(step.model)
 ## Predictive model 
 
 ```{r}
+
 train.test <- function(data,split.size){
   #randomize the data
   randomized.rows <- sample(nrow(data))
@@ -168,6 +224,7 @@ train.test <- function(data,split.size){
   test <- randomized.data[(split+1):nrow(randomized.data),]
   return(list(train,test))
 }
+
 #computes the Rsquared and MSE
 model.metrics <- function(predicted,actual,data){
   SSE <- sum((predicted-actual)^2)
@@ -179,8 +236,8 @@ model.metrics <- function(predicted,actual,data){
   return(results)
 }
 
-#From the full model:mpg~.+I(horsepower^2)+I(weight^2), specify what features to remove
-build.model <- function(data,feats){
+#From the full model:mpg~.+I(horsepower^2), specify what features to remove
+build.model.features <- function(data,feats="None"){
   if(sum(!feats%in%"None")!=0) {
   #input validation
   if(sum(!feats %in% colnames(data))!=0){
@@ -188,34 +245,74 @@ build.model <- function(data,feats){
   }
   features <- as.formula(paste("mpg~.+I(horsepower^2)-",paste(feats,collapse= "-")))
   return(features)
+  
   }
   else return(as.formula(paste("mpg~.+I(horsepower^2)")))
-  
 }
 
+# Combines usage of build.model.features and model.metrics to simulate a train-test split evaluation
 build.and.evaluate <- function(data,split.size,feats="None"){
+  #train-test split
   train <- train.test(data,split.size)[[1]]
   test <- train.test(data,split.size)[[2]]
-  model <- lm(build.model(data,feats),train)
-  print(build.model(data,feats))
+  #build model
+  model <- lm(build.model.features(data,feats),train)
+  print(build.model.features(data,feats))
+  #predict on test set
   p.train <- predict(model,train)
   p.test <- predict(model,test)
+  #evaluate model
   metric.results <- c(model.metrics(p.train,train$mpg,train),
                       model.metrics(p.test,test$mpg,test))
   names(metric.results) <- c("Train.RMSE","Train.R.Squared","Test.RMSE","Test.R.Squared")
   return(metric.results)
 }
 
+# Runs build and evaluate n times and returns a dataframe of the results 
+n.build.and.evaluate <- function(n,data,split.size,feats="None"){
+  df <- data.frame(matrix(ncol=4,nrow = 0))
+  for(i in 1:n){
+    metric.results <- build.and.evaluate(data,split.size,feats)
+    df <- rbind(df,metric.results)
+  }
+  df <- cbind(1:n,df)
+  colnames(df) <- c("Trial.number","Train.RMSE","Train.R.Squared","Test.RMSE","Test.R.Squared")
+  return(df)
+}
+
+```
+
+
+```{r,include=F}
+b <- n.build.and.evaluate(100,data.transformed,.8)
+```
+```{r}
+b
+```
+
+```{r}
+ggplot(data=b,aes(x=Trial.number))+
+  geom_line(aes(y=Train.RMSE,col="Train.RMSE"))+
+  geom_line(aes(y=Test.RMSE,col="Test.RMSE"))+
+  ylim(0.05,.09)+
+  scale_color_manual(name="cols",values = c(Train.RMSE="red",Test.RMSE="blue"))
+
+ggplot(data=b,aes(x=Trial.number))+
+  geom_line(aes(y=Train.R.Squared),col="red")+
+  geom_line(aes(y=Test.R.Squared),col="blue")+
+  ylim(.7,1.5)
 ```
 
 
 
 
-## Cross-Fold validation model 
+
+
+## Cross-Fold validation
 
 ```{r,include=F}
 model <- train(
-  build.model(data.transformed), 
+  build.model.features(data.transformed), 
   data.transformed,
   method = "lm",
   trControl = trainControl(
@@ -226,7 +323,7 @@ model <- train(
   )
 )
 model.no <- train(
-  build.model(data.transformed,c("displacement")), 
+  build.model.features(data.transformed,c("displacement")), 
   data.transformed,
   method = "lm",
   trControl = trainControl(
@@ -236,19 +333,18 @@ model.no <- train(
   )
 )
 ```
-
 ```{r}
-model
+data.transformed$cylinders
 ```
+
 
 ```{r}
 new.dat <- data.frame(cylinders=as.factor(6),displacement=80,horsepower=69,weight=2020,acceleration=19,origin=as.factor("USA"))
+new.dat
 ```
 ```{r}
-10^predict(model,new.dat)
+ 10^predict(model,new.dat)
 ```
-
-
 
 
 
