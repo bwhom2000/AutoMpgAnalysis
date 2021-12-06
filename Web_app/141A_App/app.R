@@ -194,6 +194,14 @@ n.build.and.evaluate <- function(n,data,split.size,feats="None"){
   return(df)
 }
 
+# model coefs from cross validation 
+model.coef <- data.frame(features=c("Intercept","cylinders6","cylinders 8","displacement","horsepower","weight","acceleration","originJapan","originUSA","Horsepower^2"),
+                         coefficients=c(1.955e+00,-4.665e-02,-3.399e-02,-9.599e-05,-4.513e-03,-4.304e-05,-6.536e-03,3.016e-02,5.084e-03,9.702e-06))
+
+# TRAIN_TEST SIMULATION 
+b <- n.build.and.evaluate(100,data.transformed,.8)
+
+
 
 # Define UI for application 
 ui <- navbarPage("Auto-Mpg Analysis",
@@ -201,7 +209,7 @@ ui <- navbarPage("Auto-Mpg Analysis",
   fluidPage(
   theme=shinytheme("cerulean"),
   titlePanel("Auto-mpg PCA"),
-  div("Zoom into the four quadrants of the PCA plot by selecting the given options",style="color:chocolate"),
+  div("Zoom into the four quadrants of the PCA plot by selecting the given options",style="color:ForestGreen"),
   sidebarLayout(
     sidebarPanel(
       radioButtons("pca.input",
@@ -230,8 +238,10 @@ ui <- navbarPage("Auto-Mpg Analysis",
 tabPanel("Predict MPG",
          fluidPage(
            titlePanel("Fuel economy predictor"),
-           div("Enter your car's features:",style="color:chocolate"),
-           div("The value ranges from the dataset are given and the values already in the box are just place holders"),
+           div("The value ranges from the dataset are given and the values already in the box are just place holders.",
+               style="color:ForestGreen"),
+           div("It is possible to go way above the ranges, but the prediction may not be accurate!",style="color:Crimson"),
+           div("Enter your car's features:",style="color:ForestGreen"),
            sidebarLayout(
              sidebarPanel(
                radioButtons("cylinders",
@@ -249,9 +259,33 @@ tabPanel("Predict MPG",
              ),
              
             mainPanel(
-              span(textOutput("pred.result"), style="color:MediumVioletRed")
+              tabsetPanel(
+                tabPanel("Model Prediction",span(textOutput("pred.result"), style="color:MediumVioletRed")),
+                tabPanel("Model Coefficients",tableOutput("model.coefs")),
+                tabPanel("Untransformed data",dataTableOutput("untransformed.data")),
+                tabPanel("Log 10 Transformed MPG",dataTableOutput("transformed.data"))
+              )
+
             )
            )
+         )), 
+tabPanel("Train-Test simulation",
+         fluidPage(
+           titlePanel("Simulate a Train-test split N times"),
+           div("The purpose of this simulation is to show the randomness of a train test split
+               and to see how the train and test perform based on the split size.",style="color:ForestGreen"),
+           sidebarLayout(
+             sidebarPanel(
+               div("Graph only displays 105 repetitions!",style="color:Red"),
+               numericInput("nreps","Enter number of repetitions",value=50),
+               sliderInput("size","Slide to desired size. An input of 80 means 80 for training 20 for testing",min=10,max=100,value=80)
+             ),
+             mainPanel(
+               plotOutput("RMSE.sim"),
+               plotOutput("RSQ.sim")
+             )
+           )
+           
          ))
 
 )
@@ -266,19 +300,74 @@ server <- function(input, output) {
       else {whole.pca}
     )
     output$pca.table <- renderTable(pcs.dat)
-    output$pca.importance.table <- renderTable(pcs.importance)
-    output$pca.corr <- renderTable(corr.matrix.df,width = "50%")
+    output$pca.importance.table <- renderTable(pcs.importance,digits=3)
+    output$pca.corr <- renderTable(corr.matrix.df,width = "50%",digits=3)
 # Prediction output 
-    encode_disp <- function(x){
-      if(x=="4"){
-        return(70)
-      }
+    #get coef for num cylinders
+    encode_cylind <- function(n.cylin){
+      if(n.cylin=="6") return(-4.665e-02 )
+      else if (n.cylin=="8") return (-3.399e-02)
+      else return (0)
     }
-    ho <- sum(c(-9.599e-05,-9.599e-05))
-    pred.result <- reactive({(input$displacement*ho)+(1+2)+encode_disp(input$cylinders)})
+    encode_country <- function(country){
+      if (country=="USA") return (5.084e-03)
+      else if (country=="Japan") return ( 3.016e-02 )
+      else return (0)
+    }
+    
+    numerical.inputs <- reactive({ sum(c(-9.599e-05,-4.513e-03,-4.304e-05,-6.536e-03,9.702e-06)*
+                        c(input$displacement,input$horsepower,input$weight,input$acceleration,input$horsepower^2)) })
+    
+    pred.result <- reactive({numerical.inputs()+encode_cylind(input$cylinders)+encode_country(input$origin)+1.955e+00})
+    
     output$pred.result <- renderText({
-      paste("The predicted fuel economy in miles per gallon:",pred.result())
+      paste("The predicted fuel economy in miles per gallon:",10^pred.result())
       })
+    
+    output$model.coefs <- renderTable(model.coef,digits=10)
+    output$untransformed.data <- renderDataTable(data)
+    output$transformed.data <- renderDataTable(data.transformed)
+    
+#TRAIN TEST SIMULATOR OUTPUT 
+   
+    new_dat <- reactive({n.build.and.evaluate(input$nreps,data.transformed,input$size/100)})
+    output$RMSE.sim <- renderPlot(ggplot(data=new_dat(),aes(x=Trial.number))+
+                                    labs(title="Train-Test n Times: RMSE", x="Trial Number", y="RMSE")+
+                                    theme_light()+
+                                    geom_line(aes(y=Train.RMSE,col="Train.RMSE"))+
+                                    geom_line(aes(y=Test.RMSE,col="Test.RMSE"))+
+                                    coord_cartesian(xlim=c(0,100),ylim=c(0.045,.08))+
+                                    scale_x_continuous(breaks=seq(0,100,5))+
+                                    scale_y_continuous(breaks=seq(0.045,0.08,0.005))+
+                                    scale_color_manual(values = c(Train.RMSE="#E31A1C",Test.RMSE="#33A02C"), labels = c("Train", "Test"))+ 
+                                    theme(legend.box.background = element_rect(linetype="solid", colour ="#984EA3", size=1.25),
+                                          legend.title = element_text(face="bold", hjust = .5),
+                                          legend.text = element_text(face="bold"),
+                                          panel.grid.minor.x = element_blank(),
+                                          axis.title = element_text(size=15),
+                                          axis.text = element_text(size=10),
+                                          plot.title = element_text(hjust = .5, size = 20))+
+                                    guides(colour=guide_legend("RMSE"))
+    )
+    output$RSQ.sim <- renderPlot(ggplot(data=new_dat(),aes(x=Trial.number))+
+                                   labs(title="Train-Test n Times: R Squared", x="Trial Number", y="R Squared")+
+                                   theme_light()+
+                                   geom_line(aes(y=Train.R.Squared,col="Train.R.Squared"))+
+                                   geom_line(aes(y=Test.R.Squared,col="Test.R.Squared"))+
+                                   scale_color_manual(values = c(Train.R.Squared="#E31A1C",Test.R.Squared="#33A02C"), labels = c("Train", "Test"))+ 
+                                   coord_cartesian(xlim=c(0,100),ylim=c(.5,1))+
+                                   scale_x_continuous(breaks=seq(0,100,5))+
+                                   scale_y_continuous(breaks=seq(.5,1,0.05))+
+                                   theme(legend.position="right",
+                                         legend.box.background = element_rect(linetype="solid", colour ="#984EA3", size=1.25),
+                                         legend.title = element_text(face="bold", hjust = .5),
+                                         legend.text = element_text(face="bold"),
+                                         panel.grid.minor.x = element_blank(),
+                                         axis.title = element_text(size=15),
+                                         axis.text = element_text(size=10),
+                                         plot.title = element_text(hjust = .5, size = 20))+
+                                   guides(colour=guide_legend("R Squared")))
+    
 }
 # Run the application 
 shinyApp(ui = ui, server = server)
