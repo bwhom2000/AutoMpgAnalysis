@@ -2,14 +2,24 @@
 title: "Project"
 author: "Brandon Hom"
 date: "11/2/2021"
-output: pdf_document
+output:
+  pdf_document: default
+  html_document:
+    df_print: paged
+header-includes: \usepackage[labelformat=empty]{caption}
 ---
+
+```{=tex}
+\tableofcontents
+\newpage
+```
 
 ```{r setup, include=FALSE}
 #global options
 # keeps this here to remove comments from knitted output. 
 knitr::opts_chunk$set(comments=NA)
 knitr::opts_chunk$set(echo=F)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE) 
 ```
 ```{r,include=F}
 library(tidyverse)
@@ -20,6 +30,8 @@ library(ggbiplot)
 library(caret)
 library(RColorBrewer)
 library(dendextend)
+library(cowplot)
+library(kableExtra)
 ```
 
 # Introduction 
@@ -49,14 +61,7 @@ data$car.name[82] <- "toyota"
 
 
 
-
-```{r}
-cor(data[-c(2,7,8)])
-```
-
-
-
-```{r}
+```{r,out.height="70%"}
 h.clustering.complete <- hclust(dist(scale(data[-c(2,7,8)])),method="complete") %>% as.dendrogram() %>% color_branches(k=3)
 color.order <- as.numeric(data$origin)
 colors.dendro <- color.order[order.dendrogram(h.clustering.complete)]
@@ -65,9 +70,82 @@ labels_colors(h.clustering.complete) <- colors.dendro
 h.clustering.complete <- h.clustering.complete %>% set("labels_col",colors.dendro)
 plot(h.clustering.complete)
 ```
+
+
+
+
 ```{r}
-data.frame(data,cluster=cutree(h.clustering.complete,h=5)) %>% count(c('origin','cluster'))
+hclust.data <- data.frame(data,cluster=cutree(h.clustering.complete,h=5)) 
+hclust.data.clusters <- data.frame(data,cluster=cutree(h.clustering.complete,h=5)) %>% count(c('cluster'))
+hclust.in.clusters <- data.frame(data,cluster=cutree(h.clustering.complete,h=5)) %>% count(c('cluster','origin'))
+
+#cluster analysis 
+c.1 <- hclust.data %>% filter(cluster==1 ) %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+
+c.2 <- hclust.data %>% filter(cluster==2 ) %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+
+c.3 <- hclust.data %>% filter(cluster==3 ) %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+
+clusters.data <- rbind(c.1,c.2,c.3)
+hclust.data.clusters <- cbind(hclust.data.clusters,clusters.data)
+
+# Within cluster analysis 
+US.1 <-  hclust.data %>% filter(cluster==1 & origin=="USA") %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+EU.2 <-  hclust.data %>% filter(cluster==2 & origin=="Europe") %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+JN.2 <-  hclust.data %>% filter(cluster==2 & origin=="Japan") %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+US.2 <-  hclust.data %>% filter(cluster==2 & origin=="USA") %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+EU.3 <-  hclust.data %>% filter(cluster==3 & origin=="Europe") %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+JN.3 <-  hclust.data %>% filter(cluster==3 & origin=="Japan") %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+US.3 <-  hclust.data %>% filter(cluster==3 & origin=="USA") %>% summarise(mean.displacement=mean(displacement),
+                                                                   mean.horsepower=mean(horsepower),
+                                                                   mean.weight=mean(weight),
+                                                                   mean.acceleration=mean(acceleration)
+                                                                    )
+in.clusters.data <- rbind(US.1,EU.2,JN.2,US.2,EU.3,JN.3,US.3)
+hclust.in.clusters <- cbind(hclust.in.clusters,in.clusters.data)
+kable(hclust.data.clusters,format="latex",booktabs=T,longtable=T) %>% kable_styling(font_size = 7)
+kable(hclust.in.clusters,format="latex",booktabs=T,longtable=T) %>% kable_styling(font_size = 6)
 ```
+
+
+
+
 
 
 ```{r}
@@ -77,31 +155,15 @@ colnames(pcs.dat)[1] <- "Features"
 pcs.importance <- data.frame(summary(pcs.out)[6])
 pcs.importance <- cbind(c("Standard deviation","Proportion of Variance","Cumulative Proportion"),pcs.importance)
 colnames(pcs.importance) <- c("Metrics","PC1","PC2","PC3","PC4","PC5")
-pcs.importance
 ```
-
-
-
 ```{r}
-data %>% arrange(acceleration) %>% tail(5)
-```
-
-
-```{r,fig.align='center',out.width="70%",out.height="70%"}
 cols <- brewer.pal(3, "Dark2")
-ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
-  geom_hline(yintercept = 0,col="hotpink3",size=.75)+
-  geom_vline(xintercept = 0,col="hotpink3",size=.75)+
-  theme_light()+
-  scale_color_manual(values=cols)+
-    theme(legend.box.background = element_rect(linetype="solid", colour ="hotpink3", size=1.25),
-        legend.title = element_text(face="bold", hjust = .5),
-        legend.text = element_text(face="bold"))+
-  guides(colour=guide_legend("Country"))
-  
 ```
 
-```{r,fig.show='hold',out.width="52%",warning=F}
+
+
+\newpage
+```{r,out.width="50%",out.height="25%",fig.show='hold'}
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
@@ -120,6 +182,7 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
   guides(colour=guide_legend("Country"))
 
 
+
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
   geom_vline(xintercept = 0,col="hotpink3")+
@@ -135,9 +198,10 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
         legend.title = element_text(face="bold", hjust = .5),
         legend.text = element_text(face="bold"))+
   guides(colour=guide_legend("Country"))
+
 ```
 
-```{r,fig.show='hold',out.width="50%",warning=F,echo=F}
+```{r,out.height="25%",out.width="50%",fig.show='hold'}
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
@@ -156,6 +220,7 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
         legend.text = element_text(face="bold"))+
   guides(colour=guide_legend("Country"))
 
+
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
   geom_vline(xintercept = 0,col="hotpink3")+
@@ -172,17 +237,8 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
         legend.title = element_text(face="bold", hjust = .5),
         legend.text = element_text(face="bold"))+
   guides(colour=guide_legend("Country"))
+
 ```
-
-
-```{r,out.height="35%",out.width="100%",fig.align='center'}
-ggpairs(data[-c(2,7,8)],aes(color=data$origin))+theme_bw()+theme(panel.grid=element_blank()) + scale_color_manual(values=brewer.pal(3,"Set1"))
-```
-```{r}
-ggpairs(data.transformed[-c(2,7,8)],aes(color=data$origin))+theme_bw()+theme(panel.grid=element_blank()) + scale_color_manual(values=brewer.pal(3,"Set1"))
-```
-
-
 
 ```{r}
 data.transformed <- data
@@ -190,20 +246,81 @@ data.transformed$mpg <- log(data.transformed$mpg,base=10)
 data.transformed <- data.transformed[-c(8)]
 ```
 
-```{r}
-fit <- lm(mpg~.+I(horsepower^2),data=data.transformed)
-summary(fit)
-plot(fit)
+
+```{r,out.height="23%",out.width="110%",fig.show='hold',fig.align='center'}
+ggpairs(data[-c(2,7,8)],aes(color=data$origin))+
+  theme_bw()+
+  theme(panel.grid=element_blank(),
+        plot.title=element_text(hjust=.5,size=20)) + 
+  labs(title="Pairplot of numerical features")+
+  scale_color_manual(values=brewer.pal(3,"Set1"))
+
+ggpairs(data.transformed[-c(2,7,8)],aes(color=data$origin))+
+  theme_bw()+
+  theme(panel.grid=element_blank(),
+        plot.title=element_text(hjust=.5,size=20),
+        plot.subtitle =element_text(hjust=.5,size=15)) + 
+  labs(title=" Pairplot of numerical features",
+       subtitle = "Log MPG transformed")+
+  scale_color_manual(values=brewer.pal(3,"Set1"))
 ```
 
 ```{r}
-fit <- lm(mpg~.+I(horsepower^2)+I(weight^2),data=data.transformed)
-summary(fit)
-plot(fit)
+lr.data <- lm(mpg~.,data=data[-c(8)])
+summary(lr.data)
+#residuals vs fitted plot 
+p1 <- ggplot(lr.data)+
+  theme_light()+
+  labs(title = "Residuals Fitted Values",x="Fitted Values",y="Residuals")+
+  geom_point(aes(x=lr.data$fitted.values,y=lr.data$residuals),col="darkslateblue",pch=21,fill="turquoise3",alpha=.85,size=2.5,stroke=0.75)+
+  geom_hline(yintercept = 0)+
+  theme(axis.title = element_text(size=15),
+        axis.text = element_text(size=10),
+        plot.title = element_text(hjust = .5, size = 15))
+
+p2 <- ggplot(lr.data,aes(sample=lr.data$residuals))+
+  labs(title = "QQ Normality Plot",x="Theoretical Quantile",y="Residuals")+
+  theme_light()+
+  stat_qq(col="darkslateblue",pch=21,fill="turquoise3",alpha=.75,size=2.5,stroke=0.5)+
+  geom_qq_line()+
+  theme(axis.title = element_text(size=15),
+        axis.text = element_text(size=10),
+        plot.title = element_text(hjust = .5, size = 20))
+
 ```
+
 ```{r}
+log.lr.data <- lm(mpg~.+I(horsepower^2),data=data.transformed)
+summary(log.lr.data)
+#residuals vs fitted plot
+p1a <- ggplot(log.lr.data)+
+  labs(title = "Log Transformed Residuals", x = "Log Fitted Values", y = "Log Residuals")+
+  theme_light()+
+  geom_point(aes(x=log.lr.data$fitted.values,y=log.lr.data$residuals),col="navyblue",pch=21,fill="violetred1",alpha=.85,size=2.5,stroke=.75)+
+  geom_hline(yintercept = 0)+
+  theme(axis.title = element_text(size=15),
+        axis.text = element_text(size=10),
+        plot.title = element_text(hjust = .5, size = 15))
+
+  
+p2a <- ggplot(log.lr.data,aes(sample=log.lr.data$residuals))+
+  labs(title = "QQ Normality Plot",x="Theoretical Quantile",y="Log Residuals")+
+  theme_light()+
+  stat_qq(col="navyblue",pch=21,fill="violetred1",alpha=.75,size=2.5,stroke=0.5)+
+  geom_qq_line()+
+  theme(axis.title = element_text(size=15),
+        axis.text = element_text(size=10),
+        plot.title = element_text(hjust = .5, size = 20))
+
+```
+
+```{r}
+plot_grid(p1, p2, p1a, p2a)
+```
+
+```{r,include=F}
 library(MASS)
-step.model <- stepAIC(fit, direction = "both",
+step.model <- stepAIC(log.lr.data, direction = "both",
 trace = FALSE)
 summary(step.model)
 ```
@@ -283,28 +400,65 @@ n.build.and.evaluate <- function(n,data,split.size,feats="None"){
 ```
 
 
+
 ```{r,include=F}
 b <- n.build.and.evaluate(100,data.transformed,.8)
-```
-```{r}
-b
+avg.b.RMSE <- round(mean(b$Test.RMSE),5)
+avg.b.Rsq <- round(mean(b$Test.R.Squared),5)
+avg.tr.RMSE <- round(mean(b$Train.RMSE),5)
+avg.tr.Rsq <- round(mean(b$Train.R.Squared),5)
 ```
 
-```{r}
+
+
+
+```{r,out.width="50%",out.height="50%",fig.show='hold'}
 ggplot(data=b,aes(x=Trial.number))+
+  labs(title="Train-Test n Times: RMSE", x="Trial Number", y="RMSE")+
+  theme_light()+
   geom_line(aes(y=Train.RMSE,col="Train.RMSE"))+
   geom_line(aes(y=Test.RMSE,col="Test.RMSE"))+
-  ylim(0.05,.09)+
-  scale_color_manual(name="cols",values = c(Train.RMSE="red",Test.RMSE="blue"))
+  coord_cartesian(xlim=c(0,100),ylim=c(0.045,.08))+
+  scale_x_continuous(breaks=seq(0,100,5))+
+  scale_y_continuous(breaks=seq(0.045,0.08,0.005))+
+  scale_color_manual(values = c(Train.RMSE="#E31A1C",Test.RMSE="#33A02C"), labels = c("Train", "Test"))+ 
+  theme(legend.box.background = element_rect(linetype="solid", colour ="#984EA3", size=1.25),
+        legend.title = element_text(face="bold", hjust = .5),
+        legend.text = element_text(face="bold"),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=10),
+        plot.title = element_text(hjust = .5, size = 20))+
+  guides(colour=guide_legend("RMSE"))+
+  geom_hline(yintercept = avg.b.RMSE,col='dodgerblue',linetype='dashed')+
+  geom_text(aes(0,avg.b.RMSE,label = avg.b.RMSE, vjust = -.9))+
+  geom_hline(yintercept = avg.tr.RMSE,col='black',linetype='dashed')+
+  geom_text(aes(0,avg.tr.RMSE,label = avg.tr.RMSE, vjust = 1.5))
 
 ggplot(data=b,aes(x=Trial.number))+
-  geom_line(aes(y=Train.R.Squared),col="red")+
-  geom_line(aes(y=Test.R.Squared),col="blue")+
-  ylim(.7,1.5)
+  labs(title="Train-Test n Times: R Squared", x="Trial Number", y="R Squared")+
+  theme_light()+
+  geom_line(aes(y=Train.R.Squared,col="Train.R.Squared"))+
+  geom_line(aes(y=Test.R.Squared,col="Test.R.Squared"))+
+  scale_color_manual(values = c(Train.R.Squared="#E31A1C",Test.R.Squared="#33A02C"), labels = c("Train", "Test"))+ 
+  coord_cartesian(xlim=c(0,100),ylim=c(.5,1))+
+  scale_x_continuous(breaks=seq(0,100,5))+
+  scale_y_continuous(breaks=seq(.5,1,0.05))+
+  theme(legend.position="right",
+    legend.box.background = element_rect(linetype="solid", colour ="#984EA3", size=1.25),
+        legend.title = element_text(face="bold", hjust = .5),
+        legend.text = element_text(face="bold"),
+        panel.grid.minor.x = element_blank(),
+        axis.title = element_text(size=15),
+        axis.text = element_text(size=10),
+        plot.title = element_text(hjust = .5, size = 20))+
+  guides(colour=guide_legend("R Squared"))+
+  geom_hline(yintercept = avg.b.Rsq,col='dodgerblue',linetype='dashed')+
+  geom_text(aes(0,avg.b.Rsq,label = avg.b.Rsq, vjust = 1.5))+
+  geom_hline(yintercept = avg.tr.Rsq,col='black',linetype='dashed')+
+  geom_text(aes(0,avg.tr.Rsq,label = avg.tr.Rsq, vjust = -.9))
+
 ```
-
-
-
 
 
 
@@ -322,31 +476,7 @@ model <- train(
     verboseIter = TRUE
   )
 )
-model.no <- train(
-  build.model.features(data.transformed,c("displacement")), 
-  data.transformed,
-  method = "lm",
-  trControl = trainControl(
-    method = "cv", 
-    number = 10,
-    verboseIter = TRUE
-  )
-)
 ```
-```{r}
-data.transformed$cylinders
-```
-
-
-```{r}
-new.dat <- data.frame(cylinders=as.factor(6),displacement=80,horsepower=69,weight=2020,acceleration=19,origin=as.factor("USA"))
-new.dat
-```
-```{r}
- 10^predict(model,new.dat)
-```
-
-
 
 
 
