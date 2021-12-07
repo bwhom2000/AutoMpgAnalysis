@@ -1,14 +1,19 @@
 ---
-title: "Project"
-author: "Brandon Hom"
+title: "Sta 141A Project: Auto-MPG Analysis"
 date: "11/2/2021"
 output:
   pdf_document: default
   html_document:
     df_print: paged
 header-includes: \usepackage[labelformat=empty]{caption}
----
 
+
+---
+| Name                        | Email                                              | Contributions                                                                                                  |
+|-----------------------------|----------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
+| Aditi Goyal                 | adigoyal@ucdavis.edu                               | Report Writing, table formatting. \vspace{10pt}                                |
+| Brandon Hom                 | bwhom@ucdavis.edu                                  | Unsupervised and supervised learning analyses,  web app, data visualization, tables \vspace{10pt}                            |
+|  Tammie Tam                 | tastam@ucdavis.edu                                 |Report Writing , plot formatting  |
 ```{=tex}
 \tableofcontents
 \newpage
@@ -35,8 +40,29 @@ library(kableExtra)
 ```
 
 # Introduction 
+Fuel economy is defined as how much a car can travel per volume of fuel, which is usually measured as miles per gallon (mpg). Cars with low mpg have good fuel economy and vice versa. Logically, consumers prefer to own cars with good fuel economy, since they would spend less money on gas. In addition, cars with poor fuel economy consumes more gas, which, in turn, contributes to global warming; gas is ultimately a limited resource [1]. The effects of pollution produced from the consumption of gas can be mitigated by using cars with good fuel economy.
+The ability to predict a car's fuel economy based on a set of a given car's characteristics, or information on car models with good fuel economy, can allow individual to make a more informed decision when purchasing a car - a decision that can have a positive impact on both spending and global warming. 
 
-# Exploratory data analysis
+# Dataset Description
+The data set on fuel economy was obtained from kaggle: https://www.kaggle.com/uciml/autompg-dataset. Although it is data from the late 1900s, the features within the data set can provide us insight on what variables have impact on fuel economy.The dimensions of the data set are 398 by 9, meaning that we have 9 features within our data set. `Model year` is not useful for our purposes, so it will be dropped during the analysis. `Weight`, `acceleration`, `horsepower`, `displacement`, `cylinders` are all numerical features, while `origin` is categorical. `Weight`, `acceleration`, and `horsepower` are self-explanatory. `Cylinders` are indicative of the power of an engine, where more cylinders means more power but more consumption of gas. `Displacement` refers to how much volume of air and fuel moved through the cylinders of the engine.
+
+# Research Questions 
+
+
+* Is it appropriate to fit a linear model to this data? If so, what numerical variables have the most impact on mpg? For example, if increasing weight contributes the most to MPG, individuals should be wary about purchasing heavy cars, since it will lead to more consumption of fuel.
+
+* Is it possible to build a predictive model with reasonable performance to predict a car's fuel economy? If it is possible, individuals will be able to make better car-purchasing decisions by inputting a car's features into the model and getting an estimated mpg. 
+ 
+* The origin column has Europe, Japan and USA encoded. Are cars from these regions similar, or are they completely different? Is there a region that tends to make cars with good fuel economy? What about a region that produces cars with poor fuel economy?  
+
+* What brand of cars are similar in terms of fuel economy and other features such as weight? Knowing this information can allow individuals to potentially buy cars with desired feature levels or even avoid buying cars with poor fuel economy.  
+
+These questions may be answered by using unsupervised and supervised learning methods. 
+
+\newpage
+# \textcolor{violet}{Unsupervised Learning Analysis}
+
+## Hierarchical Clustering Analysis
 ```{r,warning=F}
 # data cleaning up
 data <- read.csv('auto-mpg.csv')
@@ -61,38 +87,46 @@ data$car.name[82] <- "toyota"
 
 
 
-```{r,out.height="70%"}
+```{r,out.height="50%",out.width="80%",fig.cap="\\textcolor{blue}{Figure 1: Hierarchical Clustering results}"}
 h.clustering.complete <- hclust(dist(scale(data[-c(2,7,8)])),method="complete") %>% as.dendrogram() %>% color_branches(k=3)
 color.order <- as.numeric(data$origin)
 colors.dendro <- color.order[order.dendrogram(h.clustering.complete)]
 colors.dendro <- ifelse(colors.dendro==3,"green",ifelse(colors.dendro==2,"red","blue"))
 labels_colors(h.clustering.complete) <- colors.dendro
 h.clustering.complete <- h.clustering.complete %>% set("labels_col",colors.dendro)
-plot(h.clustering.complete)
+plot(h.clustering.complete,
+     main="Dendrogram of clustered cars colored by country",
+     ylab="Height",
+     xlab="Country")
+legend(x=290,y=9,legend=c("USA","Europe","Japan"),fill=c("green","red","blue"))
 ```
 
 
+The numerical features were scaled to have standard deviation one and complete linkage was used to cluster the cars. From the dendrogram above, there seems to be three clusters. The cluster colored with red branches consists entirely of cars from the United States, while the other two clusters are mixed.
 
-
+To gain better insight on the clusters, the mean of the numerical features was calculated for the clusters and within clusters. 
 ```{r}
 hclust.data <- data.frame(data,cluster=cutree(h.clustering.complete,h=5)) 
 hclust.data.clusters <- data.frame(data,cluster=cutree(h.clustering.complete,h=5)) %>% count(c('cluster'))
 hclust.in.clusters <- data.frame(data,cluster=cutree(h.clustering.complete,h=5)) %>% count(c('cluster','origin'))
 
 #cluster analysis 
-c.1 <- hclust.data %>% filter(cluster==1 ) %>% summarise(mean.displacement=mean(displacement),
+c.1 <- hclust.data %>% filter(cluster==1 ) %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
 
-c.2 <- hclust.data %>% filter(cluster==2 ) %>% summarise(mean.displacement=mean(displacement),
+c.2 <- hclust.data %>% filter(cluster==2 ) %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
 
-c.3 <- hclust.data %>% filter(cluster==3 ) %>% summarise(mean.displacement=mean(displacement),
+c.3 <- hclust.data %>% filter(cluster==3 ) %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
@@ -102,51 +136,62 @@ clusters.data <- rbind(c.1,c.2,c.3)
 hclust.data.clusters <- cbind(hclust.data.clusters,clusters.data)
 
 # Within cluster analysis 
-US.1 <-  hclust.data %>% filter(cluster==1 & origin=="USA") %>% summarise(mean.displacement=mean(displacement),
+US.1 <-  hclust.data %>% filter(cluster==1 & origin=="USA") %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
-EU.2 <-  hclust.data %>% filter(cluster==2 & origin=="Europe") %>% summarise(mean.displacement=mean(displacement),
+EU.2 <-  hclust.data %>% filter(cluster==2 & origin=="Europe") %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
-JN.2 <-  hclust.data %>% filter(cluster==2 & origin=="Japan") %>% summarise(mean.displacement=mean(displacement),
+JN.2 <-  hclust.data %>% filter(cluster==2 & origin=="Japan") %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
-US.2 <-  hclust.data %>% filter(cluster==2 & origin=="USA") %>% summarise(mean.displacement=mean(displacement),
+US.2 <-  hclust.data %>% filter(cluster==2 & origin=="USA") %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
-EU.3 <-  hclust.data %>% filter(cluster==3 & origin=="Europe") %>% summarise(mean.displacement=mean(displacement),
+EU.3 <-  hclust.data %>% filter(cluster==3 & origin=="Europe") %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
-JN.3 <-  hclust.data %>% filter(cluster==3 & origin=="Japan") %>% summarise(mean.displacement=mean(displacement),
+JN.3 <-  hclust.data %>% filter(cluster==3 & origin=="Japan") %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
-US.3 <-  hclust.data %>% filter(cluster==3 & origin=="USA") %>% summarise(mean.displacement=mean(displacement),
+US.3 <-  hclust.data %>% filter(cluster==3 & origin=="USA") %>% summarise(mean.mpg=mean(mpg),
+                                                                   mean.displacement=mean(displacement),
                                                                    mean.horsepower=mean(horsepower),
                                                                    mean.weight=mean(weight),
                                                                    mean.acceleration=mean(acceleration)
                                                                     )
 in.clusters.data <- rbind(US.1,EU.2,JN.2,US.2,EU.3,JN.3,US.3)
 hclust.in.clusters <- cbind(hclust.in.clusters,in.clusters.data)
-kable(hclust.data.clusters,format="latex",booktabs=T,longtable=T) %>% kable_styling(font_size = 7)
-kable(hclust.in.clusters,format="latex",booktabs=T,longtable=T) %>% kable_styling(font_size = 6)
+kable(hclust.data.clusters,format="latex",booktabs=T,longtable=T,caption = "Table 1: Cluster Analysis") %>% kable_styling(font_size = 7,latex_options = "HOLD_position")
+#hclust.data.clusters
+#hclust.in.clusters
+```
+```{r}
+kable(hclust.in.clusters,format="latex",booktabs=T,longtable=T,caption="Table 2: Within Cluster Analysis") %>% kable_styling(font_size = 7,latex_options = "HOLD_position")
 ```
 
 
 
 
-
+## Principal Component analysis 
 
 ```{r}
 pcs.out <- prcomp(data[-c(2,7,8)],scale.=T)
@@ -156,10 +201,23 @@ pcs.importance <- data.frame(summary(pcs.out)[6])
 pcs.importance <- cbind(c("Standard deviation","Proportion of Variance","Cumulative Proportion"),pcs.importance)
 colnames(pcs.importance) <- c("Metrics","PC1","PC2","PC3","PC4","PC5")
 ```
-```{r}
+```{r} 
 cols <- brewer.pal(3, "Dark2")
 ```
 
+```{r}
+PCA.interp <- data.frame(Position=c("Top Right","Top Left","Bottom Right","Bottom Left"),
+           MPG=c("Larger","Lower","Larger","Lower"),
+           Displacement=c("Lower","Larger","Lower","Larger"),
+           Horsepower=c("Lower","Larger","Lower","Larger"),
+           Weight=c("Lower","Larger","Lower","Larger"),
+           Acceleration=c("Lower","Larger","Lower","Larger"))
+```
+
+
+```{r}
+PCA.interp
+```
 
 
 \newpage
@@ -201,7 +259,7 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
 
 ```
 
-```{r,out.height="25%",out.width="50%",fig.show='hold'}
+```{r,out.height="25%",out.width="50%",fig.show='hold',fig.cap="Figure 1"}
 
 ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
@@ -240,6 +298,9 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
 
 ```
 
+# Supervised Learning Analysis 
+
+## Appropriateness of a linear model 
 ```{r}
 data.transformed <- data
 data.transformed$mpg <- log(data.transformed$mpg,base=10)
@@ -313,6 +374,9 @@ p2a <- ggplot(log.lr.data,aes(sample=log.lr.data$residuals))+
         plot.title = element_text(hjust = .5, size = 20))
 
 ```
+```{r}
+10^.06376
+```
 
 ```{r}
 plot_grid(p1, p2, p1a, p2a)
@@ -325,6 +389,9 @@ trace = FALSE)
 summary(step.model)
 ```
 
+```{r}
+colnames(data)
+```
 
 
 ## Predictive model 
@@ -409,6 +476,10 @@ avg.tr.RMSE <- round(mean(b$Train.RMSE),5)
 avg.tr.Rsq <- round(mean(b$Train.R.Squared),5)
 ```
 
+```{r}
+colMeans(b[-c(1)])
+```
+
 
 
 
@@ -477,9 +548,14 @@ model <- train(
   )
 )
 ```
+```{r}
+knitr::kable(model$results) %>% kable_styling(font_size = 7)
+```
 
+```{r}
+kable(model$finalModel$coefficients) %>% kable_styling(font_size = 6)
 
-
+```
 
 
 
@@ -489,6 +565,14 @@ model <- train(
 
 
 # Conclusion 
+
+# References 
+
+1. Transportation Technologies and Innovation. Union of Concerned Scientists. (n.d.). Retrieved November 12, 2021, from    https://www.ucsusa.org/transportation/technologies. 
+
+2. McGregor, H. V., Gergis, J., Abram, N. J., & Phipps, S. J. (2016). The Industrial Revolution kick-started global warming much earlier than we realised.
+
+3. Learning, U. C. I. M. (2017, July 2). Auto-mpg dataset. Kaggle. Retrieved November 12, 2021, from https://www.kaggle.com/uciml/autompg-dataset. 
 
 # Appendix: R code used
 

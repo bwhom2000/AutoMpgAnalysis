@@ -11,10 +11,11 @@ library(caret)
 library(RColorBrewer)
 library(dendextend)
 library(shinythemes)
+library(DT)
 # Code from project to be interfaced with app 
 
 # data cleaning up
-data <- read.csv('../../Project_code/auto-mpg.csv')
+data <- read.csv('auto-mpg.csv')
 #convert horsepower chr->dbl 
 data$horsepower <- as.numeric(data$horsepower)
 #remove rows with missing values
@@ -121,7 +122,12 @@ br.pca <- ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale =
         legend.title = element_text(face="bold", hjust = .5),
         legend.text = element_text(face="bold"))+
   guides(colour=guide_legend("Country"))
-
+PCA.interp <- data.frame(Position=c("Top Right","Top Left","Bottom Right","Bottom Left"),
+                         MPG=c("Larger","Lower","Larger","Lower"),
+                         Displacement=c("Lower","Larger","Lower","Larger"),
+                         Horsepower=c("Lower","Larger","Lower","Larger"),
+                         Weight=c("Lower","Larger","Lower","Larger"),
+                         Acceleration=c("Lower","Larger","Lower","Larger"))
 # TRANSFORMED DATA 
 data.transformed <- data
 data.transformed$mpg <- log(data.transformed$mpg,base=10)
@@ -171,7 +177,6 @@ build.and.evaluate <- function(data,split.size,feats="None"){
   test <- train.test(data,split.size)[[2]]
   #build model
   model <- lm(build.model.features(data,feats),train)
-  print(build.model.features(data,feats))
   #predict on test set
   p.train <- predict(model,train)
   p.test <- predict(model,test)
@@ -201,7 +206,7 @@ model.coef <- data.frame(features=c("Intercept","cylinders6","cylinders 8","disp
 # TRAIN_TEST SIMULATION 
 b <- n.build.and.evaluate(100,data.transformed,.8)
 
-
+features.selection <- c("cylinders","displacement","horsepower","weight","acceleration","origin")
 
 # Define UI for application 
 ui <- navbarPage("Auto-Mpg Analysis",
@@ -229,7 +234,15 @@ ui <- navbarPage("Auto-Mpg Analysis",
     mainPanel(
       tabsetPanel(
         tabPanel("PCA Plot",plotOutput("pca.plot",height=755)),
-        tabPanel("Correlation Matrix",tableOutput("pca.corr"))
+        tabPanel("Correlation Matrix",tableOutput("pca.corr")),
+        tabPanel("Interpretation of trend",
+                 div("PCA can sometimes be hard to interpret. In this case, values were standardized to their Z-score values. This means that 
+                     a negative value combined with a negative coefficient leads to a positive value.",style="color:ForestGreen"),
+                 div("  "),
+                 div("  "),
+                 div("For example, displacement has a negative coefficient for PC1, so any negative values, indicating low displacement, will be multplied by this coefficient and ultimately end up being positive.
+                     Using this logic, we can describe the trend with the table below:",style="color:ForestGreen"),
+                 tableOutput("pca.interpretation"))
       )
     )
   )
@@ -274,11 +287,16 @@ tabPanel("Train-Test simulation",
            titlePanel("Simulate a Train-test split N times"),
            div("The purpose of this simulation is to show the randomness of a train test split
                and to see how the train and test perform based on the split size.",style="color:ForestGreen"),
+           div("Furthermore, one can see how the model performance is affected by removing features from the model.",style="color:ForestGreen"),
            sidebarLayout(
              sidebarPanel(
                div("Graph only displays 105 repetitions!",style="color:Red"),
                numericInput("nreps","Enter number of repetitions",value=50),
-               sliderInput("size","Slide to desired size. An input of 80 means 80 for training 20 for testing",min=10,max=100,value=80)
+               sliderInput("size","Slide to desired size. An input of 80 means 80 for training 20 for testing",min=10,max=100,value=80),
+               #div("To avoid errors, please only select None to keep all features and deselect None when choosing other features!",style="color:Red"),
+               checkboxGroupInput("feats","Select features to remove from model",features.selection),
+               div("Average performance metrics over n repetitions:",style="color:ForestGreen"),
+               verbatimTextOutput("performance.means")
              ),
              mainPanel(
                plotOutput("RMSE.sim"),
@@ -302,6 +320,7 @@ server <- function(input, output) {
     output$pca.table <- renderTable(pcs.dat)
     output$pca.importance.table <- renderTable(pcs.importance,digits=3)
     output$pca.corr <- renderTable(corr.matrix.df,width = "50%",digits=3)
+    output$pca.interpretation <- renderTable(PCA.interp)
 # Prediction output 
     #get coef for num cylinders
     encode_cylind <- function(n.cylin){
@@ -330,7 +349,10 @@ server <- function(input, output) {
     
 #TRAIN TEST SIMULATOR OUTPUT 
    
-    new_dat <- reactive({n.build.and.evaluate(input$nreps,data.transformed,input$size/100)})
+    new_dat <- reactive({n.build.and.evaluate(input$nreps,data.transformed,input$size/100,input$feats)})
+    output$performance.means <- renderPrint({
+      colMeans(new_dat()[-c(1)])
+    })
     output$RMSE.sim <- renderPlot(ggplot(data=new_dat(),aes(x=Trial.number))+
                                     labs(title="Train-Test n Times: RMSE", x="Trial Number", y="RMSE")+
                                     theme_light()+
@@ -347,7 +369,8 @@ server <- function(input, output) {
                                           axis.title = element_text(size=15),
                                           axis.text = element_text(size=10),
                                           plot.title = element_text(hjust = .5, size = 20))+
-                                    guides(colour=guide_legend("RMSE"))
+                                    guides(colour=guide_legend("RMSE"))  
+                            
     )
     output$RSQ.sim <- renderPlot(ggplot(data=new_dat(),aes(x=Trial.number))+
                                    labs(title="Train-Test n Times: R Squared", x="Trial Number", y="R Squared")+
