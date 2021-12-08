@@ -8,6 +8,7 @@ output:
 header-includes: \usepackage[labelformat=empty]{caption}
 
 
+
 ---
 | Name                        | Email                                              | Contributions                                                                                                  |
 |-----------------------------|----------------------------------------------------|----------------------------------------------------------------------------------------------------------------|
@@ -37,16 +38,17 @@ library(RColorBrewer)
 library(dendextend)
 library(cowplot)
 library(kableExtra)
+library(ggpubr)
 ```
 
-# Introduction 
+# \textcolor{violet}{Introduction} 
 Fuel economy is defined as how much a car can travel per volume of fuel, which is usually measured as miles per gallon (mpg). Cars with low mpg have good fuel economy and vice versa. Logically, consumers prefer to own cars with good fuel economy, since they would spend less money on gas. In addition, cars with poor fuel economy consumes more gas, which, in turn, contributes to global warming; gas is ultimately a limited resource [1]. The effects of pollution produced from the consumption of gas can be mitigated by using cars with good fuel economy.
 The ability to predict a car's fuel economy based on a set of a given car's characteristics, or information on car models with good fuel economy, can allow individual to make a more informed decision when purchasing a car - a decision that can have a positive impact on both spending and global warming. 
 
-# Dataset Description
+# \textcolor{violet}{Dataset Description}
 The data set on fuel economy was obtained from kaggle: https://www.kaggle.com/uciml/autompg-dataset. Although it is data from the late 1900s, the features within the data set can provide us insight on what variables have impact on fuel economy.The dimensions of the data set are 398 by 9, meaning that we have 9 features within our data set. `Model year` is not useful for our purposes, so it will be dropped during the analysis. `Weight`, `acceleration`, `horsepower`, `displacement`, `cylinders` are all numerical features, while `origin` is categorical. `Weight`, `acceleration`, and `horsepower` are self-explanatory. `Cylinders` are indicative of the power of an engine, where more cylinders means more power but more consumption of gas. `Displacement` refers to how much volume of air and fuel moved through the cylinders of the engine.
 
-# Research Questions 
+# \textcolor{violet}{Research Questions}
 
 
 * Is it appropriate to fit a linear model to this data? If so, what numerical variables have the most impact on mpg? For example, if increasing weight contributes the most to MPG, individuals should be wary about purchasing heavy cars, since it will lead to more consumption of fuel.
@@ -62,7 +64,7 @@ These questions may be answered by using unsupervised and supervised learning me
 \newpage
 # \textcolor{violet}{Unsupervised Learning Analysis}
 
-## Hierarchical Clustering Analysis
+## \textcolor{magenta}{Hierarchical Clustering Analysis}
 ```{r,warning=F}
 # data cleaning up
 data <- read.csv('auto-mpg.csv')
@@ -104,7 +106,7 @@ legend(x=290,y=9,legend=c("USA","Europe","Japan"),fill=c("green","red","blue"))
 
 The numerical features were scaled to have standard deviation one and complete linkage was used to cluster the cars. From the dendrogram above, there seems to be three clusters. The cluster colored with red branches consists entirely of cars from the United States, while the other two clusters are mixed.
 
-To gain better insight on the clusters, the mean of the numerical features was calculated for the clusters and within clusters. 
+To gain better insight on the clusters, the mean of the numerical features was calculated for the clusters and within clusters. As seen from Table 1 of the clusters analysis, it appears that going from cluster 1 to cluster 3 generally leads to a decrease in all the features except acceleration with cluster 3 having the highest acceleration.
 ```{r}
 hclust.data <- data.frame(data,cluster=cutree(h.clustering.complete,h=5)) 
 hclust.data.clusters <- data.frame(data,cluster=cutree(h.clustering.complete,h=5)) %>% count(c('cluster'))
@@ -184,14 +186,18 @@ kable(hclust.data.clusters,format="latex",booktabs=T,longtable=T,caption = "Tabl
 #hclust.data.clusters
 #hclust.in.clusters
 ```
+
+
+
+Table 2 below shows the within cluster analysis that provides insight on the countries within the clusters. As mentioned before, Cluster 1 consists of cars from USA and has the worst fuel economy. Cluster 2 consists of many cars from the US, while Cluster 3 is somewhat balanced with Japan having the highest count. Interestingly, it can be seen that lower mpg, displacement, horsepower and weight along with a higher acceleration seem to lead to a higher mpg value. Further analysis may confirm this trend. 
+
+\newpage
+
 ```{r}
-kable(hclust.in.clusters,format="latex",booktabs=T,longtable=T,caption="Table 2: Within Cluster Analysis") %>% kable_styling(font_size = 7,latex_options = "HOLD_position")
+kable(hclust.in.clusters,format="latex",booktabs=T,longtable=T,caption="Table 2: Within Cluster Analysis") %>% kable_styling(font_size = 8,latex_options = "HOLD_position")
 ```
 
-
-
-
-## Principal Component analysis 
+## \textcolor{magenta}{Principal Component analysis} 
 
 ```{r}
 pcs.out <- prcomp(data[-c(2,7,8)],scale.=T)
@@ -214,16 +220,13 @@ PCA.interp <- data.frame(Position=c("Top Right","Top Left","Bottom Right","Botto
            Acceleration=c("Lower","Larger","Lower","Larger"))
 ```
 
-
 ```{r}
-PCA.interp
+corr.matrix <- cor(data[-c(2,7,8)])
 ```
 
-
-\newpage
 ```{r,out.width="50%",out.height="25%",fig.show='hold'}
 
-ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
   geom_vline(xintercept = 0,col="hotpink3")+
   ylim(0,1.8)+
@@ -241,7 +244,7 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
 
 
 
-ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
   geom_vline(xintercept = 0,col="hotpink3")+
   ylim(0,1.8)+
@@ -259,9 +262,9 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
 
 ```
 
-```{r,out.height="25%",out.width="50%",fig.show='hold',fig.cap="Figure 1"}
+```{r,out.height="25%",out.width="50%",fig.show='hold',fig.cap="\\textcolor{blue}{Figure 2: Biplot of PCA results}"}
 
-ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
   geom_vline(xintercept = 0,col="hotpink3")+
   ylim(-2.5,0)+
@@ -279,7 +282,7 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
   guides(colour=guide_legend("Country"))
 
 
-ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
+ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.size = 2.3)+
   geom_hline(yintercept = 0,col="hotpink3")+
   geom_vline(xintercept = 0,col="hotpink3")+
   ylim(-3,0)+
@@ -298,9 +301,26 @@ ggbiplot(pcs.out,labels = data$car.name,groups=data$origin,obs.scale = 1,labels.
 
 ```
 
-# Supervised Learning Analysis 
+```{r}
+kable(corr.matrix,format="latex",booktabs=T,longtable=T,caption="Table 3: Correlation Matrix") %>% kable_styling(font_size = 7,latex_options = "HOLD_position")
+```
 
-## Appropriateness of a linear model 
+\newpage 
+
+For principal component analysis (PCA), all numerical features were scaled and then ran into the PCA algorithm to construct the plots below. The points are labeled by car brand. The whole plot was difficult to see, so it was broken down into four quadrants. *See the shiny app for a more interactive experience that includes zooming into the plots, pca variance, pca importance, explanation of PCA trend, etc.*. 
+
+With principal components 1 and 2, about 92.7% of the variance can be explained. From the correlation matrix, we can see that mpg is strongly correlated with displacement, horsepower and weight. As a result, the loading values for these four variables were relatively similar in PC1 with absolute values ranging from .44 to .49, while acceleration being slightly correlated had a smaller loading value of .335 in terms of absolute value. 
+
+When interpreting the trend of the PCA biplots , loading values were considered along with whether a point was negative or positive. It was decided to have acceleration be explained by PC2. For PC1, $\frac{78.5}{5}=15.7$, so if all the loading values were equal each one would contribute 15.7% of the variability. However due to acceleration's loading value the contributed variance is roughly 11%, whereas in the case of PC2 the contributed variability is about 12%. Putting this all together, the table below summarizes the general trend when looking at points that are positioned at a specific direction, such as bottom right.  
+
+```{r}
+kable(PCA.interp,format="latex",booktabs=T,longtable=T,caption="Table 4: PCA interpretation") %>% kable_styling(font_size = 9,latex_options = "HOLD_position")
+```
+
+
+# \textcolor{violet}{Supervised Learning Analysis}
+
+## \textcolor{magenta}{Appropriateness of a linear model and analysis}
 ```{r}
 data.transformed <- data
 data.transformed$mpg <- log(data.transformed$mpg,base=10)
@@ -308,7 +328,7 @@ data.transformed <- data.transformed[-c(8)]
 ```
 
 
-```{r,out.height="23%",out.width="110%",fig.show='hold',fig.align='center'}
+```{r,out.height="23%",out.width="110%",fig.show='hold',fig.align='center',fig.cap="\\textcolor{blue}{Figure 3: Pairplot of Numerical Features}"}
 ggpairs(data[-c(2,7,8)],aes(color=data$origin))+
   theme_bw()+
   theme(panel.grid=element_blank(),
@@ -326,9 +346,27 @@ ggpairs(data.transformed[-c(2,7,8)],aes(color=data$origin))+
   scale_color_manual(values=brewer.pal(3,"Set1"))
 ```
 
+The pairplots above display the the distribution and relationship of the numerical features. Looking at the graphs that pair mpg with the other features, the relationship is roughly linear for the first half but curves during the later half. Upon applying a $log_{10}$ transformation on mpg, we can see from the transformed pairplot that the relationship begins to look more linear. Furthermore, the absolute value of the correlations are higher. 
+
+Next, all the numerical features along with the categorical features of cylinders and origin were fitted to a linear regression model that aims to predict mpg without any transformation (mpg is still in miles per gallon). In other words, the model is 
+
+\textcolor{teal}{$\beta_0$+$\beta_1$cylinders6+$\beta_2$cylinders8+$\beta_3$displacement+$\beta_4$horsepower+$\beta_5$weight+$\beta_6$acceleration+$\beta_7$originJapan+$\beta_8$originUSA}
+
+With this model, the residual standard error is 3.987 and the $R^2$ is .7444. However as we saw from the pairplots, it seems that the $log_{10}$ transformation may lead to a better model. 
+
+Fitting all the features with the transformed mpg (log base 10 of miles per gallon), the residual standard error is .6509 $log_{10}(mpg)$ or 1.16 in mpg units, and the $R^2$ value is .8097. The log transformation definitely improved our linear model. However, from the pairplot of the $log_{10}$ transformation, there still seems to be a slight curve. In an attempt to further improve the residual standard error and $R^2$ value, a combination of quadratic terms were added, such as $weight^2$+$horsepower^2$, $acceleration^2$+$weight^2$+$horsepower^2$, etc. 
+
+After testing many combinations, the model that was found to lead to the most improvement was 
+
+\textcolor{teal}{$\beta_0$+$\beta_1$cylinders6+$\beta_2$cylinders8+$\beta_3$displacement+$\beta_4$horsepower+$\beta_5$weight+$\beta_6$acceleration+$\beta_7$originJapan+$\beta_8$originUSA+$\beta_9$ $horsepower^2$}
+
+this model had a residual standard error of .06367 $log_{10}(mpg)$ or 1.158 mpg and a $R^2$ of .8179, meaning that 81.79% of the variation can be explained. Table 5 below shows the coefficients along with their significance. 
+
+
+
+
 ```{r}
 lr.data <- lm(mpg~.,data=data[-c(8)])
-summary(lr.data)
 #residuals vs fitted plot 
 p1 <- ggplot(lr.data)+
   theme_light()+
@@ -350,9 +388,11 @@ p2 <- ggplot(lr.data,aes(sample=lr.data$residuals))+
 
 ```
 
+
+
 ```{r}
 log.lr.data <- lm(mpg~.+I(horsepower^2),data=data.transformed)
-summary(log.lr.data)
+log.coef <- summary(log.lr.data)$coef
 #residuals vs fitted plot
 p1a <- ggplot(log.lr.data)+
   labs(title = "Log Transformed Residuals", x = "Log Fitted Values", y = "Log Residuals")+
@@ -372,15 +412,21 @@ p2a <- ggplot(log.lr.data,aes(sample=log.lr.data$residuals))+
   theme(axis.title = element_text(size=15),
         axis.text = element_text(size=10),
         plot.title = element_text(hjust = .5, size = 20))
-
 ```
 ```{r}
-10^.06376
+kable(log.coef,format="latex",caption="Table 5: Summary of final linear model") %>% kable_styling(font_size = 7,latex_options = "HOLD_position")
 ```
 
 ```{r}
 plot_grid(p1, p2, p1a, p2a)
 ```
+
+
+To asses the appropriateness of a linear model, residual plots and Q-Q plots were constructed to check for the assumptions of equal variance and normality. The plots with colored with turquoise refer to the model without the log transformation. The equal variance assumption seem to be violated, since heteroskedasticity seems to be present (the variance seems to be larger as we move further out along the x-axis). The normality assumption may also be violated, as points pass theoretical quantile 2 start to deviate from the line. 
+
+The plots colored with pink refer to the log transformed model, which includes the $horsepower^2$ term. The assumptions in this case do not seem to be heavily violated. From the residual vs fitted values plot, we can see that the variance is now roughly equal. The Q-Q plot does not seem to have points that extremely deviate from the theoretical line. 
+
+Now that we know a linear model is appropriate with the predictor variables cylinders, displacement, horsepower, weight, acceleration, origin and $horsepower^2$, we can move onto making a general predictive model.
 
 ```{r,include=F}
 library(MASS)
@@ -389,12 +435,12 @@ trace = FALSE)
 summary(step.model)
 ```
 
-```{r}
-colnames(data)
-```
 
 
-## Predictive model 
+
+## \textcolor{magenta}{Predictive model}
+
+### Train-Test splitting 
 
 ```{r}
 
@@ -476,14 +522,12 @@ avg.tr.RMSE <- round(mean(b$Train.RMSE),5)
 avg.tr.Rsq <- round(mean(b$Train.R.Squared),5)
 ```
 
-```{r}
-colMeans(b[-c(1)])
-```
 
 
 
 
-```{r,out.width="50%",out.height="50%",fig.show='hold'}
+
+```{r,out.width="50%",out.height="50%",fig.show='hold',fig.cap="\\textcolor{blue}{Figure 5: Train-Test split results n times}"}
 ggplot(data=b,aes(x=Trial.number))+
   labs(title="Train-Test n Times: RMSE", x="Trial Number", y="RMSE")+
   theme_light()+
@@ -531,12 +575,16 @@ ggplot(data=b,aes(x=Trial.number))+
 
 ```
 
+One thing to consider about a train-test split approach to building a predictive model is the randomness of the performance. To get a better idea of the randomness of different train-test split sizes, a custom function was built to test the performance of different split sizes as well as the performance for when certain predictor variables are removed. The plot above shows the output of the function,which is just a dataframe of the performance metrics, for an 80-20 split (20% for testing) for the full model. With an 80-20 split, it can be seen that sometimes the $R^2$ and RMSE values for the test set fluctuate a lot, where the testing performance is sometimes below the training set. The blue dashed line represents the average performance metrics for the test set across the repetitions, while the black dashed line is for the training set. With an 80-20 split, the average $R^2$ value fluctuates between .8 and .82, and the average RMSE fluctuates between .062 and .064 in $log_{10}(mpg)$ units. This is both for training and testing performance metrics. Due to the random nature of train-test splitting, and the difficulties of recording the model coefficients from the custom function, a k-fold cross validation was applied to assess prediction error and construct a final model. *See the shiny app's third tab to play around with the function and see how the performance metrics change* 
 
 
-## Cross-Fold validation
 
+
+###  K-fold Cross Validation
+
+Using the `caret` package's train function, a 10x10-fold cross validation was applied to the transformed mpg dataset and the performance is given by table 6. Due to the randomness of the cross validation, the RMSE and $R^2$ values will not be exactly the same each time it is ran, but the value of RMSE seems to be roughly .064 $log_{10}(mpg)$, or 1.158 mpg, and the $R^2$ value seems to be roughly .81.
 ```{r,include=F}
-model <- train(
+k.fold.model <- train(
   build.model.features(data.transformed), 
   data.transformed,
   method = "lm",
@@ -548,13 +596,15 @@ model <- train(
   )
 )
 ```
-```{r}
-knitr::kable(model$results) %>% kable_styling(font_size = 7)
-```
+
 
 ```{r}
-kable(model$finalModel$coefficients) %>% kable_styling(font_size = 6)
+kable(k.fold.model$results,format="latex",caption="Table 6: 10x10-fold cross validation results ") %>% kable_styling(font_size = 9,latex_options = "HOLD_position")
+```
 
+The table below is the coefficients that the cross validation produced, suggesting that with these coefficients we can obtain an average prediction error of 1.158 mpg and an average $R^2$ value of roughly 81%. *To play around with the predictive model, check out tab 2 of the shiny app*
+```{r}
+kable(k.fold.model$finalModel$coefficients,format="latex",caption="Table 7: Final mode coefficients ") %>% kable_styling(font_size = 8,latex_options = "HOLD_position")
 ```
 
 
@@ -563,10 +613,39 @@ kable(model$finalModel$coefficients) %>% kable_styling(font_size = 6)
 
 
 
+# \textcolor{violet}{Interpretation of results}
 
-# Conclusion 
+## \textcolor{magenta}{1. Is it appropriate to fit a linear model to this data? If so, what numerical variables have the most impact on mpg?} 
 
-# References 
+From the residual plots and QQ-plots on page 6, a linear model with the target variable transformed is appropriate, since the assumptions of equal variance and normality are not extremely violated. Furthermore, we can see from the transformed pair plot on page 5 that the relationship of the numerical features becomes more linear with the target variable, $log_{10}(mpg)$. 
+
+Table 5 on page 6 shows the significance of the coefficients/predictor variables. Horesepower, weight, acceleration, and $horsepower^2$ appear to be significant if $\alpha=.05$. Displacement, on the other hand, does not appear to be significant due to its p-value being .53. To further test the significance of displacement, stepwise regression was ran and removed displacement from the model. Additionally, the repeated train-test splitting interfaced on the shiny app also shows that removing displacement from the model hardly changes the performance. 
+
+##  \textcolor{magenta}{2. Is it possible to build a predictive model with reasonable performance to predict a car's fuel economy?}
+
+From the repeated train-test splitting, it can be seen that an 80-20 split leads to a reasonable performance with the $R^2$ being .81 and the RMSE value being roughly .063 on average. Unfortunately, model coefficients were hard to record, and it is important to keep in mind the randomness of a single train-test split; performing just one train-test split and using those coefficients may end up being one of the poor- performance splits. With a 10x10-fold cross validation with the caret package, we were able to see that the out of prediction error is roughly 1.15 mpg and an $R^2$ value of roughly 81% is achieved using the coefficients in Table 7. Overall, the model performs well. 
+ 
+## \textcolor{magenta}{3. Are cars from these regions similar, or are they completely different? Is there a region that tends to make cars with good fuel economy? What about a region that produces cars with poor fuel economy?}
+
+From the hierarchical clustering analysis on page 3, cars across the regions are indeed similar as seen by the clustering. With the exception of cluster 1, cluster 2 and 3 are relatively mixed. Cluster 1 consists entirely of cars from the United states, and, as seen from table 1, has the worst fuel economy. Looking into the clusters using Table 2, it can also be seen that cars from the United States still have the worst fuel economy compared to that of Europe and Japan. However, it is important to note that cluster 2 is imbalanced with the United states having nearly four times the counts of Europe and Japan. In regards to the region that produces cars with good fuel economy, it appears to be Japan. Despite the imbalance in cluster 2, Japan has the highest average mpg. Cluster 3 is relatively balanced and Japan also has the highest average mpg value there too. 
+
+## \textcolor{magenta}{4. What brand of cars are similar in terms of fuel economy and other features such as weight?}
+
+From the biplot on page 4, and using the trend described with Table 4 on page 5, we can see that, similar to the hierarchical clustering, there seems to be a grouping of cars from the United States. The cars from the United states that lean more towards the left have poorer fuel economy and are all larger with regards to the numerical features in Table 4. The opposite is true for cars that lean more towards the right as described by the trend from Table 4. What probably interests us the most is the cars that are similar with regards to good fuel economy. Note that when interpreting the biplot, we define more positive values to be good fuel economy. since scores were standardized and the loading value for mpg was positive, so a positive standardized score for mpg means it was above the average. 
+
+As seen from the right side of the biplot, Japanese cars tend to have good fuel economy with Toyota, Datsun, Honda, etc.. being the best in terms of fuel economy. For European cars, Volkswagen models seem to be in a similar position. Interestingly, a few American car models also seem to be similar, such as Plymouth and Chevrolet, though they are not as frequent compared to Japan. 
+
+# \textcolor{violet}{Conclusion}
+
+
+Using supervised learning and unsupervised learning techniques, we were able to draw interesting insights from our data. PCA and hierarchical clustering allowed us to discover that cars from the United states generally have poor fuel economy compared to Japan and Europe. Among the cars from the United States, Ford, Amc, Dodge, Chevrolet, and more American car brands had many models with poor fuel economy. Japan, on the other hand, was found to make cars with good fuel economy with the Toyota, Datsun, and Honda brands being the most notable. Europe's volkswagen models were also similar. 
+
+Using all the features of the dataset to predict mpg, a log transformation lead to better performance along with the addition of the $horsepower^2$ term. Despite the randomness of the train-test splitting, cross validation enabled us to construct a model that had an out of prediction error of 1.15 mpg and an $R^2$ of 81%. However, is it important to take into account that the dataset was only 398 rows long, which is quite small. With more data the model may be improved such that the RMSE value decreases and the $R^2$ value increases. 
+
+Overall, a small dataset was a limitation of this analysis. Despite this dataset being old, it shows how the United States has a history of contributing to the emissions of greenhouse gases, and poorly manufactured automobiles is reflective of that. Today, the United States continues to be a major contributor [5]. Perhaps the United States should look at the American models similar to Japan and Europe and use those as inspiration to build better cars, or import more cars from Japan and Europe and produced less American cars. 
+
+\newpage
+# \textcolor{violet}{References}
 
 1. Transportation Technologies and Innovation. Union of Concerned Scientists. (n.d.). Retrieved November 12, 2021, from    https://www.ucsusa.org/transportation/technologies. 
 
@@ -574,7 +653,13 @@ kable(model$finalModel$coefficients) %>% kable_styling(font_size = 6)
 
 3. Learning, U. C. I. M. (2017, July 2). Auto-mpg dataset. Kaggle. Retrieved November 12, 2021, from https://www.kaggle.com/uciml/autompg-dataset. 
 
-# Appendix: R code used
+4. Rdocumentation: https://www.rdocumentation.org/
+
+5. Althor, G., Watson, J. E., & Fuller, R. A. (2016). Global mismatch between greenhouse gas emissions and the burden of climate change. Scientific reports, 6(1), 1-6.
+
+\newpage
+
+# \textcolor{violet}{Appendix: R code used}
 
 ```{r ref.label=knitr::all_labels(), echo=TRUE, eval=FALSE}
 ```
